@@ -3,8 +3,10 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/adnan-jasarevic/adnanjasarevic.com/backend/internal/store"
@@ -42,6 +44,7 @@ type API struct {
 	trustProxy     bool
 	notifier       Notifier
 	contactLimiter *rateLimiter
+	background     sync.WaitGroup
 }
 
 func New(db Store, cfg Config) *API {
@@ -50,6 +53,21 @@ func New(db Store, cfg Config) *API {
 		trustProxy:     cfg.TrustProxy,
 		notifier:       cfg.Notifier,
 		contactLimiter: newRateLimiter(5, 10*time.Minute),
+	}
+}
+
+// WaitBackground waits for background work, such as email notifications, to finish.
+func (a *API) WaitBackground(ctx context.Context) error {
+	done := make(chan struct{})
+	go func() {
+		a.background.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+		return nil
+	case <-ctx.Done():
+		return fmt.Errorf("background work did not finish: %w", ctx.Err())
 	}
 }
 
