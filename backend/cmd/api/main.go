@@ -48,7 +48,11 @@ func run() error {
 		log.Print("email notifications disabled: RESEND_API_KEY or CONTACT_NOTIFY_TO not set")
 	}
 
-	api := handlers.New(db, handlers.Config{TrustProxy: cfg.TrustProxy, Notifier: notifier})
+	api := handlers.New(db, handlers.Config{
+		TrustProxy:     cfg.TrustProxy,
+		Notifier:       notifier,
+		AllowedOrigins: cfg.AllowedOrigins,
+	})
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,
 		Handler:           api.Routes(),
