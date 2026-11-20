@@ -14,6 +14,7 @@ type Config struct {
 	ResendAPIKey      string
 	ContactNotifyFrom string
 	ContactNotifyTo   string
+	AllowedOrigins    []string
 }
 
 func Load() Config {
@@ -25,6 +26,7 @@ func Load() Config {
 		ResendAPIKey:      getEnv("RESEND_API_KEY", ""),
 		ContactNotifyFrom: getEnv("CONTACT_NOTIFY_FROM", "Portfolio contact form <onboarding@resend.dev>"),
 		ContactNotifyTo:   getEnv("CONTACT_NOTIFY_TO", ""),
+		AllowedOrigins:    getList("CORS_ALLOWED_ORIGINS", "http://localhost:5173"),
 	}
 }
 
@@ -68,4 +70,15 @@ func getBool(key string, fallback bool) bool {
 		return fallback
 	}
 	return v
+}
+
+func getList(key, fallback string) []string {
+	var items []string
+	for _, item := range strings.Split(getEnv(key, fallback), ",") {
+		item = strings.TrimSuffix(strings.TrimSpace(item), "/")
+		if item != "" {
+			items = append(items, item)
+		}
+	}
+	return items
 }

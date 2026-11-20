@@ -111,13 +111,13 @@ func (a *API) createContact(w http.ResponseWriter, r *http.Request) {
 
 	if a.notifier != nil {
 		ctx := context.WithoutCancel(r.Context())
-		go func() {
+		a.background.Go(func() {
 			ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 			defer cancel()
 			if err := a.notifier.NotifyContact(ctx, id, msg); err != nil {
 				log.Printf("notify contact message %d: %v", id, err)
 			}
-		}()
+		})
 	}
 
 	writeJSON(w, http.StatusCreated, map[string]string{"status": "received"})

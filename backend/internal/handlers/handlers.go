@@ -3,8 +3,10 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/adnan-jasarevic/adnanjasarevic.com/backend/internal/store"
@@ -33,33 +35,56 @@ type Store interface {
 }
 
 type Config struct {
-	TrustProxy bool
-	Notifier   Notifier
+	TrustProxy     bool
+	Notifier       Notifier
+	AllowedOrigins []string
 }
 
 type API struct {
 	db             Store
 	trustProxy     bool
 	notifier       Notifier
+	allowedOrigins map[string]bool
 	contactLimiter *rateLimiter
+	background     sync.WaitGroup
 }
 
 func New(db Store, cfg Config) *API {
+	origins := make(map[string]bool, len(cfg.AllowedOrigins))
+	for _, o := range cfg.AllowedOrigins {
+		origins[o] = true
+	}
 	return &API{
 		db:             db,
 		trustProxy:     cfg.TrustProxy,
 		notifier:       cfg.Notifier,
+		allowedOrigins: origins,
 		contactLimiter: newRateLimiter(5, 10*time.Minute),
 	}
 }
 
-func (a *API) Routes() *http.ServeMux {
+// WaitBackground waits for background work, such as email notifications, to finish.
+func (a *API) WaitBackground(ctx context.Context) error {
+	done := make(chan struct{})
+	go func() {
+		a.background.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+		return nil
+	case <-ctx.Done():
+		return fmt.Errorf("background work did not finish: %w", ctx.Err())
+	}
+}
+
+func (a *API) Routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", a.health)
 	mux.HandleFunc("GET /projects", a.listProjects)
 	mux.HandleFunc("GET /cv", a.getCV)
 	mux.HandleFunc("POST /contact", a.rateLimit(a.contactLimiter, a.createContact))
-	return mux
+	return a.cors(mux)
 }
 
 func (a *API) health(w http.ResponseWriter, r *http.Request) {
