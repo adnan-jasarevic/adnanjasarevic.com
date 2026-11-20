@@ -19,7 +19,11 @@ type CVStore interface {
 }
 
 type ContactStore interface {
-	CreateContactMessage(ctx context.Context, m store.NewContactMessage) error
+	CreateContactMessage(ctx context.Context, m store.NewContactMessage) (int64, error)
+}
+
+type Notifier interface {
+	NotifyContact(ctx context.Context, id int64, m store.NewContactMessage) error
 }
 
 type Store interface {
@@ -30,11 +34,13 @@ type Store interface {
 
 type Config struct {
 	TrustProxy bool
+	Notifier   Notifier
 }
 
 type API struct {
 	db             Store
 	trustProxy     bool
+	notifier       Notifier
 	contactLimiter *rateLimiter
 }
 
@@ -42,6 +48,7 @@ func New(db Store, cfg Config) *API {
 	return &API{
 		db:             db,
 		trustProxy:     cfg.TrustProxy,
+		notifier:       cfg.Notifier,
 		contactLimiter: newRateLimiter(5, 10*time.Minute),
 	}
 }

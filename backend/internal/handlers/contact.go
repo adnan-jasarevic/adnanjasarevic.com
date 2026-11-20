@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"log"
@@ -100,15 +101,24 @@ func (a *API) createContact(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := a.db.CreateContactMessage(r.Context(), store.NewContactMessage{
-		Name:    req.Name,
-		Email:   req.Email,
-		Message: req.Message,
-	})
+	msg := store.NewContactMessage{Name: req.Name, Email: req.Email, Message: req.Message}
+	id, err := a.db.CreateContactMessage(r.Context(), msg)
 	if err != nil {
 		log.Printf("create contact message: %v", err)
 		writeError(w, http.StatusInternalServerError, "could not send message")
 		return
 	}
+
+	if a.notifier != nil {
+		ctx := context.WithoutCancel(r.Context())
+		go func() {
+			ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+			defer cancel()
+			if err := a.notifier.NotifyContact(ctx, id, msg); err != nil {
+				log.Printf("notify contact message %d: %v", id, err)
+			}
+		}()
+	}
+
 	writeJSON(w, http.StatusCreated, map[string]string{"status": "received"})
 }

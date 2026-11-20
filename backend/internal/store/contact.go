@@ -8,10 +8,12 @@ type NewContactMessage struct {
 	Message string
 }
 
-func (s *Store) CreateContactMessage(ctx context.Context, m NewContactMessage) error {
-	_, err := s.pool.Exec(ctx, `
+func (s *Store) CreateContactMessage(ctx context.Context, m NewContactMessage) (int64, error) {
+	var id int64
+	err := s.pool.QueryRow(ctx, `
 		INSERT INTO contact_messages (name, email, message)
-		VALUES ($1, $2, $3)`,
-		m.Name, m.Email, m.Message)
-	return err
+		VALUES ($1, $2, $3)
+		RETURNING id`,
+		m.Name, m.Email, m.Message).Scan(&id)
+	return id, err
 }
