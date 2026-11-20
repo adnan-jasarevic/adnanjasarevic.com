@@ -3,7 +3,7 @@
 .env.*
 !.env.example
 
-backend/backend
+backend/api
 backend/bin/
 *.test
 *.out
