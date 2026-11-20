@@ -7,17 +7,33 @@ import (
 	"net/http"
 	"net/mail"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/adnan-jasarevic/adnanjasarevic.com/backend/internal/store"
 )
 
-const maxContactBodyBytes = 16 << 10
+const (
+	maxContactBodyBytes = 16 << 10
+	minFillTime         = 3 * time.Second
+)
 
 type contactRequest struct {
-	Name    string `json:"name"`
-	Email   string `json:"email"`
-	Message string `json:"message"`
+	Name      string `json:"name"`
+	Email     string `json:"email"`
+	Message   string `json:"message"`
+	Website   string `json:"website"`
+	ElapsedMs int64  `json:"elapsedMs"`
+}
+
+func (c contactRequest) spamReason() string {
+	switch {
+	case c.Website != "":
+		return "honeypot filled"
+	case time.Duration(c.ElapsedMs)*time.Millisecond < minFillTime:
+		return "submitted too fast"
+	}
+	return ""
 }
 
 func (c *contactRequest) normalize() {
@@ -69,6 +85,12 @@ func (a *API) createContact(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		writeError(w, http.StatusBadRequest, "invalid JSON")
+		return
+	}
+
+	if reason := req.spamReason(); reason != "" {
+		log.Printf("contact message dropped: %s", reason)
+		writeJSON(w, http.StatusCreated, map[string]string{"status": "received"})
 		return
 	}
 
