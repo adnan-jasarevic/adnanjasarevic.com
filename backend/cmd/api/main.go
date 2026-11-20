@@ -33,7 +33,7 @@ func run() error {
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,
-		Handler:           handlers.New(db).Routes(),
+		Handler:           handlers.New(db, handlers.Config{TrustProxy: cfg.TrustProxy}).Routes(),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
 		WriteTimeout:      10 * time.Second,

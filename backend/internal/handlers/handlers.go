@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/adnan-jasarevic/adnanjasarevic.com/backend/internal/store"
 )
@@ -27,12 +28,22 @@ type Store interface {
 	ContactStore
 }
 
-type API struct {
-	db Store
+type Config struct {
+	TrustProxy bool
 }
 
-func New(db Store) *API {
-	return &API{db: db}
+type API struct {
+	db             Store
+	trustProxy     bool
+	contactLimiter *rateLimiter
+}
+
+func New(db Store, cfg Config) *API {
+	return &API{
+		db:             db,
+		trustProxy:     cfg.TrustProxy,
+		contactLimiter: newRateLimiter(5, 10*time.Minute),
+	}
 }
 
 func (a *API) Routes() *http.ServeMux {
@@ -40,7 +51,7 @@ func (a *API) Routes() *http.ServeMux {
 	mux.HandleFunc("GET /health", a.health)
 	mux.HandleFunc("GET /projects", a.listProjects)
 	mux.HandleFunc("GET /cv", a.getCV)
-	mux.HandleFunc("POST /contact", a.createContact)
+	mux.HandleFunc("POST /contact", a.rateLimit(a.contactLimiter, a.createContact))
 	return mux
 }
 
