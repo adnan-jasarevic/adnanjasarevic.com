@@ -8,7 +8,7 @@ import (
 )
 
 func (a *API) listProjects(w http.ResponseWriter, r *http.Request) {
-	projects, err := a.projects.ListPublishedProjects(r.Context())
+	projects, err := a.db.ListPublishedProjects(r.Context())
 	if err != nil {
 		log.Printf("list projects: %v", err)
 		writeError(w, http.StatusInternalServerError, "could not load projects")
