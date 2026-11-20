@@ -17,9 +17,14 @@ type CVStore interface {
 	GetCV(ctx context.Context) (store.CV, error)
 }
 
+type ContactStore interface {
+	CreateContactMessage(ctx context.Context, m store.NewContactMessage) error
+}
+
 type Store interface {
 	ProjectStore
 	CVStore
+	ContactStore
 }
 
 type API struct {
@@ -35,6 +40,7 @@ func (a *API) Routes() *http.ServeMux {
 	mux.HandleFunc("GET /health", a.health)
 	mux.HandleFunc("GET /projects", a.listProjects)
 	mux.HandleFunc("GET /cv", a.getCV)
+	mux.HandleFunc("POST /contact", a.createContact)
 	return mux
 }
 
