@@ -13,11 +13,16 @@ import (
 
 type fakeStore struct {
 	projects []store.Project
+	cv       store.CV
 	err      error
 }
 
 func (f *fakeStore) ListPublishedProjects(ctx context.Context) ([]store.Project, error) {
 	return f.projects, f.err
+}
+
+func (f *fakeStore) GetCV(ctx context.Context) (store.CV, error) {
+	return f.cv, f.err
 }
 
 func serve(t *testing.T, fs *fakeStore, method, path string) *httptest.ResponseRecorder {
@@ -72,6 +77,49 @@ func TestListProjectsEmptyReturnsArray(t *testing.T) {
 
 func TestListProjectsStoreError(t *testing.T) {
 	rec := serve(t, &fakeStore{err: errors.New("db down")}, http.MethodGet, "/projects")
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Errorf("status = %d, want %d", rec.Code, http.StatusInternalServerError)
+	}
+}
+
+func TestGetCV(t *testing.T) {
+	fs := &fakeStore{cv: store.CV{
+		Profile:    &store.Profile{FullName: "Adnan Jasarevic"},
+		Experience: []store.Experience{{ID: 1, Company: "Acme", Role: "Developer"}},
+		Skills:     []store.Skill{{ID: 1, Name: "Go", Category: "Languages"}},
+	}}
+	rec := serve(t, fs, http.MethodGet, "/cv")
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+	var got store.CV
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("decode body: %v", err)
+	}
+	if got.Profile == nil || got.Profile.FullName != "Adnan Jasarevic" {
+		t.Errorf("profile = %+v, want full name Adnan Jasarevic", got.Profile)
+	}
+	if len(got.Experience) != 1 || got.Experience[0].Company != "Acme" {
+		t.Errorf("experience = %+v, want one entry at Acme", got.Experience)
+	}
+	if len(got.Skills) != 1 || got.Skills[0].Name != "Go" {
+		t.Errorf("skills = %+v, want one skill named Go", got.Skills)
+	}
+}
+
+func TestGetCVEmptyReturnsArrays(t *testing.T) {
+	rec := serve(t, &fakeStore{}, http.MethodGet, "/cv")
+
+	want := "{\"profile\":null,\"experience\":[],\"education\":[],\"skills\":[]}\n"
+	if got := rec.Body.String(); got != want {
+		t.Errorf("body = %q, want %q", got, want)
+	}
+}
+
+func TestGetCVStoreError(t *testing.T) {
+	rec := serve(t, &fakeStore{err: errors.New("db down")}, http.MethodGet, "/cv")
 
 	if rec.Code != http.StatusInternalServerError {
 		t.Errorf("status = %d, want %d", rec.Code, http.StatusInternalServerError)

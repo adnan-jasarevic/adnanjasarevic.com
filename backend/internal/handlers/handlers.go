@@ -13,18 +13,28 @@ type ProjectStore interface {
 	ListPublishedProjects(ctx context.Context) ([]store.Project, error)
 }
 
-type API struct {
-	projects ProjectStore
+type CVStore interface {
+	GetCV(ctx context.Context) (store.CV, error)
 }
 
-func New(projects ProjectStore) *API {
-	return &API{projects: projects}
+type Store interface {
+	ProjectStore
+	CVStore
+}
+
+type API struct {
+	db Store
+}
+
+func New(db Store) *API {
+	return &API{db: db}
 }
 
 func (a *API) Routes() *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", a.health)
 	mux.HandleFunc("GET /projects", a.listProjects)
+	mux.HandleFunc("GET /cv", a.getCV)
 	return mux
 }
 
