@@ -2,8 +2,6 @@ package handlers
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
 	"log"
 	"net/http"
 	"net/mail"
@@ -76,16 +74,8 @@ func isEmail(s string) bool {
 }
 
 func (a *API) createContact(w http.ResponseWriter, r *http.Request) {
-	r.Body = http.MaxBytesReader(w, r.Body, maxContactBodyBytes)
-
 	var req contactRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		var tooLarge *http.MaxBytesError
-		if errors.As(err, &tooLarge) {
-			writeError(w, http.StatusRequestEntityTooLarge, "request body too large")
-			return
-		}
-		writeError(w, http.StatusBadRequest, "invalid JSON")
+	if !decodeJSON(w, r, &req, maxContactBodyBytes) {
 		return
 	}
 
