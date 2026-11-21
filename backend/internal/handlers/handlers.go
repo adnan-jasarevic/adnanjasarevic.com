@@ -17,6 +17,10 @@ import (
 
 type ProjectStore interface {
 	ListPublishedProjects(ctx context.Context) ([]store.Project, error)
+	ListProjects(ctx context.Context) ([]store.Project, error)
+	CreateProject(ctx context.Context, p store.NewProject) (store.Project, error)
+	UpdateProject(ctx context.Context, id int64, p store.ProjectPatch) (store.Project, error)
+	DeleteProject(ctx context.Context, id int64) error
 }
 
 type CVStore interface {
@@ -123,6 +127,11 @@ func (a *API) Routes() http.Handler {
 	mux.HandleFunc("GET /admin/messages", a.requireAdmin(a.listMessages))
 	mux.HandleFunc("PATCH /admin/messages/{id}", a.requireAdmin(a.updateMessage))
 	mux.HandleFunc("DELETE /admin/messages/{id}", a.requireAdmin(a.deleteMessage))
+
+	mux.HandleFunc("GET /admin/projects", a.requireAdmin(a.listAdminProjects))
+	mux.HandleFunc("POST /admin/projects", a.requireAdmin(a.createProject))
+	mux.HandleFunc("PATCH /admin/projects/{id}", a.requireAdmin(a.updateProject))
+	mux.HandleFunc("DELETE /admin/projects/{id}", a.requireAdmin(a.deleteProject))
 	return a.cors(mux)
 }
 
@@ -140,6 +149,10 @@ func writeJSON(w http.ResponseWriter, status int, data any) {
 
 func writeError(w http.ResponseWriter, status int, message string) {
 	writeJSON(w, status, map[string]string{"error": message})
+}
+
+func writeFieldErrors(w http.ResponseWriter, status int, fields map[string]string) {
+	writeJSON(w, status, map[string]any{"error": "validation failed", "fields": fields})
 }
 
 // decodeJSON reads a JSON body of at most maxBytes into dst. On failure it writes the error response and returns false.

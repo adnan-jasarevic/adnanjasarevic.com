@@ -87,7 +87,7 @@ func (a *API) createContact(w http.ResponseWriter, r *http.Request) {
 
 	req.normalize()
 	if errs := req.validate(); len(errs) > 0 {
-		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "validation failed", "fields": errs})
+		writeFieldErrors(w, http.StatusBadRequest, errs)
 		return
 	}
 
