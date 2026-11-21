@@ -3,9 +3,11 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
@@ -23,6 +25,9 @@ type CVStore interface {
 
 type ContactStore interface {
 	CreateContactMessage(ctx context.Context, m store.NewContactMessage) (int64, error)
+	ListContactMessages(ctx context.Context, unreadOnly bool) ([]store.ContactMessage, error)
+	SetContactMessageRead(ctx context.Context, id int64, read bool) error
+	DeleteContactMessage(ctx context.Context, id int64) error
 }
 
 type AdminSessionStore interface {
@@ -114,6 +119,10 @@ func (a *API) Routes() http.Handler {
 	mux.HandleFunc("GET /auth/github/callback", a.githubCallback)
 	mux.HandleFunc("POST /auth/logout", a.logout)
 	mux.HandleFunc("GET /auth/me", a.requireAdmin(a.me))
+
+	mux.HandleFunc("GET /admin/messages", a.requireAdmin(a.listMessages))
+	mux.HandleFunc("PATCH /admin/messages/{id}", a.requireAdmin(a.updateMessage))
+	mux.HandleFunc("DELETE /admin/messages/{id}", a.requireAdmin(a.deleteMessage))
 	return a.cors(mux)
 }
 
@@ -131,4 +140,29 @@ func writeJSON(w http.ResponseWriter, status int, data any) {
 
 func writeError(w http.ResponseWriter, status int, message string) {
 	writeJSON(w, status, map[string]string{"error": message})
+}
+
+// decodeJSON reads a JSON body of at most maxBytes into dst. On failure it writes the error response and returns false.
+func decodeJSON(w http.ResponseWriter, r *http.Request, dst any, maxBytes int64) bool {
+	r.Body = http.MaxBytesReader(w, r.Body, maxBytes)
+	if err := json.NewDecoder(r.Body).Decode(dst); err != nil {
+		var tooLarge *http.MaxBytesError
+		if errors.As(err, &tooLarge) {
+			writeError(w, http.StatusRequestEntityTooLarge, "request body too large")
+			return false
+		}
+		writeError(w, http.StatusBadRequest, "invalid JSON")
+		return false
+	}
+	return true
+}
+
+// pathID parses the {id} path value. On failure it writes a 404 and returns false.
+func pathID(w http.ResponseWriter, r *http.Request) (int64, bool) {
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil || id <= 0 {
+		writeError(w, http.StatusNotFound, "not found")
+		return 0, false
+	}
+	return id, true
 }
