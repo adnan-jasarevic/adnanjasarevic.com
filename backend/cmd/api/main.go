@@ -7,11 +7,13 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/adnan-jasarevic/adnanjasarevic.com/backend/internal/config"
 	"github.com/adnan-jasarevic/adnanjasarevic.com/backend/internal/email"
+	"github.com/adnan-jasarevic/adnanjasarevic.com/backend/internal/github"
 	"github.com/adnan-jasarevic/adnanjasarevic.com/backend/internal/handlers"
 	"github.com/adnan-jasarevic/adnanjasarevic.com/backend/internal/store"
 )
@@ -48,10 +50,21 @@ func run() error {
 		log.Print("email notifications disabled: RESEND_API_KEY or CONTACT_NOTIFY_TO not set")
 	}
 
+	var githubAuth handlers.GitHubAuth
+	if cfg.GithubClientID != "" && cfg.GithubClientSecret != "" {
+		githubAuth = github.NewOAuth(cfg.GithubClientID, cfg.GithubClientSecret, cfg.GithubRedirectURL)
+	} else {
+		log.Print("admin login disabled: GITHUB_CLIENT_ID or GITHUB_CLIENT_SECRET not set")
+	}
+
 	api := handlers.New(db, handlers.Config{
 		TrustProxy:     cfg.TrustProxy,
 		Notifier:       notifier,
 		AllowedOrigins: cfg.AllowedOrigins,
+		GitHub:         githubAuth,
+		AdminGithubID:  cfg.AdminGithubID,
+		AdminURL:       cfg.AdminURL,
+		SecureCookies:  strings.HasPrefix(cfg.GithubRedirectURL, "https://"),
 	})
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,

@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/adnan-jasarevic/adnanjasarevic.com/backend/internal/github"
 	"github.com/adnan-jasarevic/adnanjasarevic.com/backend/internal/store"
 )
 
@@ -24,6 +25,17 @@ type ContactStore interface {
 	CreateContactMessage(ctx context.Context, m store.NewContactMessage) (int64, error)
 }
 
+type AdminSessionStore interface {
+	CreateAdminSession(ctx context.Context, tokenHash []byte, githubID int64, githubLogin string, expiresAt time.Time) error
+	GetAdminSession(ctx context.Context, tokenHash []byte) (store.AdminSession, error)
+	DeleteAdminSession(ctx context.Context, tokenHash []byte) error
+}
+
+type GitHubAuth interface {
+	LoginURL(state string) string
+	UserFromCode(ctx context.Context, code string) (github.User, error)
+}
+
 type Notifier interface {
 	NotifyContact(ctx context.Context, id int64, m store.NewContactMessage) error
 }
@@ -32,12 +44,17 @@ type Store interface {
 	ProjectStore
 	CVStore
 	ContactStore
+	AdminSessionStore
 }
 
 type Config struct {
 	TrustProxy     bool
 	Notifier       Notifier
 	AllowedOrigins []string
+	GitHub         GitHubAuth
+	AdminGithubID  int64
+	AdminURL       string
+	SecureCookies  bool
 }
 
 type API struct {
@@ -45,6 +62,10 @@ type API struct {
 	trustProxy     bool
 	notifier       Notifier
 	allowedOrigins map[string]bool
+	github         GitHubAuth
+	adminGithubID  int64
+	adminURL       string
+	secureCookies  bool
 	contactLimiter *rateLimiter
 	background     sync.WaitGroup
 }
@@ -59,6 +80,10 @@ func New(db Store, cfg Config) *API {
 		trustProxy:     cfg.TrustProxy,
 		notifier:       cfg.Notifier,
 		allowedOrigins: origins,
+		github:         cfg.GitHub,
+		adminGithubID:  cfg.AdminGithubID,
+		adminURL:       cfg.AdminURL,
+		secureCookies:  cfg.SecureCookies,
 		contactLimiter: newRateLimiter(5, 10*time.Minute),
 	}
 }
@@ -84,6 +109,11 @@ func (a *API) Routes() http.Handler {
 	mux.HandleFunc("GET /projects", a.listProjects)
 	mux.HandleFunc("GET /cv", a.getCV)
 	mux.HandleFunc("POST /contact", a.rateLimit(a.contactLimiter, a.createContact))
+
+	mux.HandleFunc("GET /auth/github/login", a.githubLogin)
+	mux.HandleFunc("GET /auth/github/callback", a.githubCallback)
+	mux.HandleFunc("POST /auth/logout", a.logout)
+	mux.HandleFunc("GET /auth/me", a.requireAdmin(a.me))
 	return a.cors(mux)
 }
 

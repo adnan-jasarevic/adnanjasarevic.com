@@ -8,25 +8,35 @@ import (
 )
 
 type Config struct {
-	Port              string
-	DatabaseURL       string
-	TrustProxy        bool
-	ResendAPIKey      string
-	ContactNotifyFrom string
-	ContactNotifyTo   string
-	AllowedOrigins    []string
+	Port               string
+	DatabaseURL        string
+	TrustProxy         bool
+	ResendAPIKey       string
+	ContactNotifyFrom  string
+	ContactNotifyTo    string
+	AllowedOrigins     []string
+	GithubClientID     string
+	GithubClientSecret string
+	GithubRedirectURL  string
+	AdminGithubID      int64
+	AdminURL           string
 }
 
 func Load() Config {
 	loadEnvFile(".env")
 	return Config{
-		Port:              getEnv("PORT", "8080"),
-		DatabaseURL:       getEnv("DATABASE_URL", "postgres://portfolio:portfolio@localhost:5433/portfolio?sslmode=disable"),
-		TrustProxy:        getBool("TRUST_PROXY", false),
-		ResendAPIKey:      getEnv("RESEND_API_KEY", ""),
-		ContactNotifyFrom: getEnv("CONTACT_NOTIFY_FROM", "Portfolio contact form <onboarding@resend.dev>"),
-		ContactNotifyTo:   getEnv("CONTACT_NOTIFY_TO", ""),
-		AllowedOrigins:    getList("CORS_ALLOWED_ORIGINS", "http://localhost:5173"),
+		Port:               getEnv("PORT", "8080"),
+		DatabaseURL:        getEnv("DATABASE_URL", "postgres://portfolio:portfolio@localhost:5433/portfolio?sslmode=disable"),
+		TrustProxy:         getBool("TRUST_PROXY", false),
+		ResendAPIKey:       getEnv("RESEND_API_KEY", ""),
+		ContactNotifyFrom:  getEnv("CONTACT_NOTIFY_FROM", "Portfolio contact form <onboarding@resend.dev>"),
+		ContactNotifyTo:    getEnv("CONTACT_NOTIFY_TO", ""),
+		AllowedOrigins:     getList("CORS_ALLOWED_ORIGINS", "http://localhost:5173"),
+		GithubClientID:     getEnv("GITHUB_CLIENT_ID", ""),
+		GithubClientSecret: getEnv("GITHUB_CLIENT_SECRET", ""),
+		GithubRedirectURL:  getEnv("GITHUB_REDIRECT_URL", "http://localhost:8080/auth/github/callback"),
+		AdminGithubID:      getInt64("ADMIN_GITHUB_ID", 202077371),
+		AdminURL:           getEnv("ADMIN_URL", "http://localhost:5173/admin"),
 	}
 }
 
@@ -81,4 +91,12 @@ func getList(key, fallback string) []string {
 		}
 	}
 	return items
+}
+
+func getInt64(key string, fallback int64) int64 {
+	v, err := strconv.ParseInt(getEnv(key, ""), 10, 64)
+	if err != nil {
+		return fallback
+	}
+	return v
 }
