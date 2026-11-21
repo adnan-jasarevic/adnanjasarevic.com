@@ -34,7 +34,7 @@ func (a *API) updateMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if req.Read == nil {
-		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "validation failed", "fields": map[string]string{"read": "is required"}})
+		writeFieldErrors(w, http.StatusBadRequest, map[string]string{"read": "is required"})
 		return
 	}
 
