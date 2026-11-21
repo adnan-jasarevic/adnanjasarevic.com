@@ -25,6 +25,16 @@ type ProjectStore interface {
 
 type CVStore interface {
 	GetCV(ctx context.Context) (store.CV, error)
+	PutProfile(ctx context.Context, p store.ProfileInput) (store.Profile, error)
+	CreateExperience(ctx context.Context, e store.NewExperience) (store.Experience, error)
+	UpdateExperience(ctx context.Context, id int64, e store.ExperiencePatch) (store.Experience, error)
+	DeleteExperience(ctx context.Context, id int64) error
+	CreateEducation(ctx context.Context, e store.NewEducation) (store.Education, error)
+	UpdateEducation(ctx context.Context, id int64, e store.EducationPatch) (store.Education, error)
+	DeleteEducation(ctx context.Context, id int64) error
+	CreateSkill(ctx context.Context, s store.NewSkill) (store.Skill, error)
+	UpdateSkill(ctx context.Context, id int64, s store.SkillPatch) (store.Skill, error)
+	DeleteSkill(ctx context.Context, id int64) error
 }
 
 type ContactStore interface {
@@ -132,6 +142,17 @@ func (a *API) Routes() http.Handler {
 	mux.HandleFunc("POST /admin/projects", a.requireAdmin(a.createProject))
 	mux.HandleFunc("PATCH /admin/projects/{id}", a.requireAdmin(a.updateProject))
 	mux.HandleFunc("DELETE /admin/projects/{id}", a.requireAdmin(a.deleteProject))
+
+	mux.HandleFunc("PUT /admin/profile", a.requireAdmin(a.putProfile))
+	mux.HandleFunc("POST /admin/experience", a.requireAdmin(a.createExperience))
+	mux.HandleFunc("PATCH /admin/experience/{id}", a.requireAdmin(a.updateExperience))
+	mux.HandleFunc("DELETE /admin/experience/{id}", a.requireAdmin(a.deleteCVItem("experience", a.db.DeleteExperience)))
+	mux.HandleFunc("POST /admin/education", a.requireAdmin(a.createEducation))
+	mux.HandleFunc("PATCH /admin/education/{id}", a.requireAdmin(a.updateEducation))
+	mux.HandleFunc("DELETE /admin/education/{id}", a.requireAdmin(a.deleteCVItem("education", a.db.DeleteEducation)))
+	mux.HandleFunc("POST /admin/skills", a.requireAdmin(a.createSkill))
+	mux.HandleFunc("PATCH /admin/skills/{id}", a.requireAdmin(a.updateSkill))
+	mux.HandleFunc("DELETE /admin/skills/{id}", a.requireAdmin(a.deleteCVItem("skill", a.db.DeleteSkill)))
 	return a.cors(mux)
 }
 

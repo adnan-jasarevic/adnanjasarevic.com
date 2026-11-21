@@ -42,10 +42,18 @@ type Education struct {
 }
 
 type Skill struct {
-	ID       int64  `json:"id" db:"id"`
-	Name     string `json:"name" db:"name"`
-	Category string `json:"category" db:"category"`
+	ID        int64  `json:"id" db:"id"`
+	Name      string `json:"name" db:"name"`
+	Category  string `json:"category" db:"category"`
+	SortOrder int    `json:"sortOrder" db:"sort_order"`
 }
+
+const (
+	profileColumns    = `full_name, headline, summary, location, email, github_url, linkedin_url, updated_at`
+	experienceColumns = `id, company, role, location, start_date, end_date, description, highlights`
+	educationColumns  = `id, institution, degree, field, start_date, end_date, description`
+	skillColumns      = `id, name, category, sort_order`
+)
 
 type CV struct {
 	Profile    *Profile     `json:"profile"`
@@ -57,18 +65,18 @@ type CV struct {
 func (s *Store) GetCV(ctx context.Context) (CV, error) {
 	batch := &pgx.Batch{}
 	batch.Queue(`
-		SELECT full_name, headline, summary, location, email, github_url, linkedin_url, updated_at
+		SELECT ` + profileColumns + `
 		FROM profile`)
 	batch.Queue(`
-		SELECT id, company, role, location, start_date, end_date, description, highlights
+		SELECT ` + experienceColumns + `
 		FROM experience
 		ORDER BY start_date DESC`)
 	batch.Queue(`
-		SELECT id, institution, degree, field, start_date, end_date, description
+		SELECT ` + educationColumns + `
 		FROM education
 		ORDER BY start_date DESC`)
 	batch.Queue(`
-		SELECT id, name, category
+		SELECT ` + skillColumns + `
 		FROM skills
 		ORDER BY category, sort_order, name`)
 
