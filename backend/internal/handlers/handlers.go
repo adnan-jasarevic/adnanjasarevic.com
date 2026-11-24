@@ -67,7 +67,7 @@ type Store interface {
 }
 
 type Config struct {
-	TrustProxy     bool
+	ClientIPHeader string
 	Notifier       Notifier
 	AllowedOrigins []string
 	GitHub         GitHubAuth
@@ -78,7 +78,7 @@ type Config struct {
 
 type API struct {
 	db             Store
-	trustProxy     bool
+	clientIPHeader string
 	notifier       Notifier
 	allowedOrigins map[string]bool
 	github         GitHubAuth
@@ -96,7 +96,7 @@ func New(db Store, cfg Config) *API {
 	}
 	return &API{
 		db:             db,
-		trustProxy:     cfg.TrustProxy,
+		clientIPHeader: cfg.ClientIPHeader,
 		notifier:       cfg.Notifier,
 		allowedOrigins: origins,
 		github:         cfg.GitHub,

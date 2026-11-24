@@ -58,7 +58,7 @@ func run() error {
 	}
 
 	api := handlers.New(db, handlers.Config{
-		TrustProxy:     cfg.TrustProxy,
+		ClientIPHeader: cfg.ClientIPHeader,
 		Notifier:       notifier,
 		AllowedOrigins: cfg.AllowedOrigins,
 		GitHub:         githubAuth,

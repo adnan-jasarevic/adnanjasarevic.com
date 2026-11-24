@@ -10,7 +10,7 @@ import (
 type Config struct {
 	Port               string
 	DatabaseURL        string
-	TrustProxy         bool
+	ClientIPHeader     string
 	ResendAPIKey       string
 	ContactNotifyFrom  string
 	ContactNotifyTo    string
@@ -27,7 +27,7 @@ func Load() Config {
 	return Config{
 		Port:               getEnv("PORT", "8080"),
 		DatabaseURL:        getEnv("DATABASE_URL", "postgres://portfolio:portfolio@localhost:5433/portfolio?sslmode=disable"),
-		TrustProxy:         getBool("TRUST_PROXY", false),
+		ClientIPHeader:     getEnv("CLIENT_IP_HEADER", ""),
 		ResendAPIKey:       getEnv("RESEND_API_KEY", ""),
 		ContactNotifyFrom:  getEnv("CONTACT_NOTIFY_FROM", "Portfolio contact form <onboarding@resend.dev>"),
 		ContactNotifyTo:    getEnv("CONTACT_NOTIFY_TO", ""),
@@ -72,14 +72,6 @@ func getEnv(key, fallback string) string {
 		return v
 	}
 	return fallback
-}
-
-func getBool(key string, fallback bool) bool {
-	v, err := strconv.ParseBool(getEnv(key, ""))
-	if err != nil {
-		return fallback
-	}
-	return v
 }
 
 func getList(key, fallback string) []string {
