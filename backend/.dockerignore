@@ -1,0 +1,7 @@
+.env
+.env.*
+*_test.go
+bin/
+api
+Dockerfile
+.dockerignore

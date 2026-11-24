@@ -40,9 +40,6 @@ type NewProject struct {
 	SortOrder   int
 	Published   bool
 }
-
-// ProjectPatch holds the fields to change. Nil fields are left unchanged.
-// An empty RepoURL or LiveURL clears the column.
 type ProjectPatch struct {
 	Title       *string
 	Slug        *string
