@@ -72,11 +72,13 @@ func (a *API) rateLimit(rl *rateLimiter, next http.HandlerFunc) http.HandlerFunc
 	}
 }
 
+// clientIP uses the header set by the hosting proxy when one is configured,
+// falling back to the connection address if it's missing or not an IP.
 func (a *API) clientIP(r *http.Request) string {
-	if a.trustProxy {
-		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-			parts := strings.Split(xff, ",")
-			return strings.TrimSpace(parts[len(parts)-1])
+	if a.clientIPHeader != "" {
+		ip := strings.TrimSpace(r.Header.Get(a.clientIPHeader))
+		if net.ParseIP(ip) != nil {
+			return ip
 		}
 	}
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
