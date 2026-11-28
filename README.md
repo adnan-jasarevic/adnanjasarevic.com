@@ -1,11 +1,11 @@
 # adnanjasarevic.com
 
-Source for my personal portfolio site, adnanjasarevic.com. The site hasn't been deployed yet.
+Source for my personal portfolio site, [adnanjasarevic.com](https://adnanjasarevic.com).
 
 - **backend/**: Go API using only the standard library `net/http`, PostgreSQL via pgx, migrations with goose. Serves CV and project data, handles the contact form and an admin area with GitHub sign-in.
 - **frontend/**: React, TypeScript and Vite. Loads its content from the API at runtime.
 
-The API runs on Render with Postgres on Neon and Resend for contact form emails. The frontend will be hosted on Cloudflare Pages.
+The API runs on Render with Postgres on Neon and Resend for contact form emails. The frontend is a static site on Cloudflare Workers.
 
 ## Running locally
 
